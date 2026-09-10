@@ -33,11 +33,13 @@ export default function Home() {
     <main id="main" lang={lang}>
       <header className="masthead">
         <div className="brand">TEXAS <span>CIVIC GUIDE</span></div>
-        <div className="utility home-utility">
-          <span>{es ? 'Educación cívica independiente' : 'Independent civic education'}</span>
-          <button type="button" className="home-lang" onClick={() => setLang(es ? 'en' : 'es')}>
-            {es ? 'ENGLISH' : 'ESPAÑOL'}
-          </button>
+        <div className="home-tools">
+          <span className="home-independent">{es ? 'Educación cívica independiente' : 'Independent civic education'}</span>
+          <div className="language-switch" role="group" aria-label={es ? 'Seleccionar idioma' : 'Select language'}>
+            <button type="button" className={lang === 'en' ? 'is-active' : ''} aria-pressed={lang === 'en'} onClick={() => setLang('en')}>English</button>
+            <span aria-hidden="true">/</span>
+            <button type="button" className={lang === 'es' ? 'is-active' : ''} aria-pressed={lang === 'es'} onClick={() => setLang('es')}>Español</button>
+          </div>
         </div>
       </header>
 
@@ -56,7 +58,7 @@ export default function Home() {
 
         <div className="city-picker" aria-label={es ? 'Elige tu gobierno local' : 'Choose your local government'}>
           {places.map(place => (
-            <a key={place.name} href={place.href}>
+            <a key={place.name} href={`${place.href}?lang=${lang}`}>
               <strong>{place.name}</strong>
               <span>{es ? place.noteEs : place.noteEn}</span>
               <b aria-hidden="true">→</b>
