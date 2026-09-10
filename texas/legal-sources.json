@@ -1,0 +1,32 @@
+{
+  "lastLegalReview": "2026-09-10",
+  "rule": "NO SOURCE = NO ANSWER",
+  "modules": [
+    {
+      "id": "open-meetings",
+      "en": "Texas Open Meetings Act",
+      "es": "Ley de Reuniones Abiertas de Texas",
+      "authority": "Texas Government Code, Chapter 551",
+      "statute": "https://statutes.capitol.texas.gov/Docs/GV/htm/GV.551.htm",
+      "ag": "https://www.texasattorneygeneral.gov/open-government/meetings-act",
+      "trainingVideo": "https://youtu.be/_OEP_aHl2-Y?si=-t7_X5FRIGhb__ew"
+    },
+    {
+      "id": "public-information",
+      "en": "Texas Public Information Act",
+      "es": "Ley de Información Pública de Texas",
+      "authority": "Texas Government Code, Chapter 552",
+      "statute": "https://statutes.capitol.texas.gov/Docs/GV/htm/GV.552.htm",
+      "ag": "https://www.texasattorneygeneral.gov/open-government/members-public/overview-public-information-act",
+      "trainingVideo": "https://www.youtube.com/watch?v=8---oCBbeow&t=109s"
+    },
+    {
+      "id": "constitution",
+      "en": "Texas Constitution",
+      "es": "Constitución de Texas",
+      "authority": "Texas Constitution",
+      "official": "https://statutes.capitol.texas.gov/Docs/CN/htm/CN.1.htm",
+      "trainingVideo": "https://www.youtube.com/watch?v=_h7oHEWahgQ"
+    }
+  ]
+}
