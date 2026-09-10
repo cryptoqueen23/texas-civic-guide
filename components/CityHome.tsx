@@ -1,6 +1,7 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 type CityHomeProps = {
   city: string;
@@ -33,7 +34,7 @@ const cityRoutes: Route[] = [
   {phrases:['municipal court','ticket','traffic ticket','citation','multa','tribunal municipal'],area:'city',tool:'help',titleEn:'Municipal court / ticket',titleEs:'Tribunal municipal / multa',officeEn:'Municipal Court',officeEs:'Tribunal Municipal'},
   {phrases:['city election','mayor election','council election','elección municipal','elección de alcalde'],area:'city',tool:'help',titleEn:'City elections',titleEs:'Elecciones municipales',officeEn:'City Secretary / Elections',officeEs:'Secretaría Municipal / Elecciones'},
   {phrases:['council agenda','city council agenda','council meeting','council minutes','public comment','agenda del concejo','reunión del concejo'],area:'city',tool:'meetings',titleEn:'City Council meetings',titleEs:'Reuniones del Concejo Municipal',officeEn:'City Council / City Secretary',officeEs:'Concejo Municipal / Secretaría Municipal'},
-  {phrases:['city budget','city audit','city debt','tax rate','bond','certificate of obligation','presupuesto municipal','auditoría municipal'],area:'city',tool:'money',titleEn:'City finances',titleEs:'Finanzas municipales',officeEn:'Finance / City Council',officeEs:'Finanzas / Concejo Municipal'},
+  {phrases:['city budget','city audit','city debt','tax rate','certificate of obligation','presupuesto municipal','auditoría municipal'],area:'city',tool:'money',titleEn:'City finances',titleEs:'Finanzas municipales',officeEn:'Finance / City Council',officeEs:'Finanzas / Concejo Municipal'},
   {phrases:['public record','open records','tpia','pir','ordinance','resolution','city records','registro público','información pública','ordenanza','resolución'],area:'city',tool:'records',titleEn:'City public records',titleEs:'Registros públicos municipales',officeEn:'City Secretary / Public Information',officeEs:'Secretaría Municipal / Información Pública'}
 ];
 
@@ -56,13 +57,19 @@ function normalize(value:string){
 
 function findRoute(query:string){
   const q=normalize(query);
+  if(!q) return undefined;
   const all=[...cityRoutes,...countyRoutes];
   const exact=all.find(r=>r.phrases.some(p=>normalize(p)===q));
   if(exact) return exact;
   return all.find(r=>r.phrases.some(p=>q.includes(normalize(p)) || normalize(p).includes(q)));
 }
 
+function sectionId(tool:ToolId){
+  return tool==='help'?'help':tool;
+}
+
 export default function CityHome({ city, subtitle, officialUrl, jurisdictionType='city' }: CityHomeProps) {
+  const params=useSearchParams();
   const [lang,setLang]=useState<Lang>('en');
   const [query,setQuery]=useState('');
   const [submitted,setSubmitted]=useState(false);
@@ -71,50 +78,68 @@ export default function CityHome({ city, subtitle, officialUrl, jurisdictionType
   const result=useMemo(()=>findRoute(query),[query]);
   const isCounty=jurisdictionType==='county';
 
-  function runRoute(route:Route){
+  function goToRoute(route:Route){
     setSelected(route);
     setActiveTool(route.tool);
-    requestAnimationFrame(()=>document.getElementById('resident-tool')?.scrollIntoView({behavior:'smooth',block:'start'}));
+    setSubmitted(true);
+    const id=sectionId(route.tool);
+    requestAnimationFrame(()=>{
+      document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'});
+      window.history.replaceState(null,'',`#${id}`);
+    });
   }
+
+  useEffect(()=>{
+    const incoming=params.get('q');
+    if(!incoming) return;
+    setQuery(incoming);
+    const route=findRoute(incoming);
+    if(route && route.area===jurisdictionType) goToRoute(route);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
 
   function submit(e:FormEvent){
     e.preventDefault();
     setSubmitted(true);
-    if(result && result.area===jurisdictionType) runRoute(result);
+    if(result && result.area===jurisdictionType) goToRoute(result);
     else setSelected(result || null);
   }
 
   const navEn=['I Need Help','Your Local Government','Meetings','Follow the Money','Documents','Your Rights','Charter / Structure','Open Meetings Act','Public Information Act','Official Sources'];
   const navEs=['Necesito Ayuda','Tu Gobierno Local','Reuniones','Sigue el Dinero','Documentos','Tus Derechos','Carta / Estructura','Ley de Reuniones Abiertas','Ley de Información Pública','Fuentes Oficiales'];
   const ids=['help','hall','meetings','money','documents','rights','charter','oma','pia','sources'];
-
   const problemButtons=(isCounty?countyRoutes:cityRoutes).filter(r=>r.tool==='help');
+
+  const currentTitle=selected ? (lang==='en'?selected.titleEn:selected.titleEs) : '';
+  const currentOffice=selected ? (lang==='en'?selected.officeEn:selected.officeEs) : '';
 
   return <main id="main" lang={lang}>
     <header className="city-header"><a className="wordmark" href="/">TEXAS <span>CIVIC GUIDE</span></a><nav aria-label="Utility"><a href="#sources">{lang==='en'?'Sources':'Fuentes'}</a><a href="#accessibility">{lang==='en'?'Accessibility':'Accesibilidad'}</a><button type="button" onClick={()=>setLang(lang==='en'?'es':'en')}>{lang==='en'?'ESPAÑOL':'ENGLISH'}</button></nav></header>
     <div className="city-label"><span>{lang==='en'?'YOUR LOCAL GOVERNMENT':'TU GOBIERNO LOCAL'}</span><strong>{city}</strong><small>{subtitle}</small></div>
 
-    <section className="resident-hero"><div className="hero-copy"><p className="eyebrow">{lang==='en'?'LOCAL GOVERNMENT SHOULD NOT REQUIRE A TRANSLATOR':'EL GOBIERNO LOCAL NO DEBERÍA NECESITAR TRADUCTOR'}</p><h1>{lang==='en'?'What do you need':'¿Qué necesitas'}<br/><em>{lang==='en'?'from your government?':'de tu gobierno?'}</em></h1><p>{lang==='en'?'Type the problem in plain language. We will give you one best answer.':'Escribe el problema en lenguaje sencillo. Te daremos una sola mejor respuesta.'}</p></div>
-      <form className="big-search" onSubmit={submit}><label htmlFor="city-search">{lang==='en'?'Search':'Buscar'} {city}</label><div><input id="city-search" value={query} onChange={e=>{setQuery(e.target.value);setSubmitted(false)}} placeholder={isCounty?(lang==='en'?'property tax, deed, county road, commissioners court…':'impuesto predial, escritura, camino del condado…'):(lang==='en'?'water bill, pothole, permit, council agenda…':'factura de agua, bache, permiso, agenda del concejo…')}/><button type="submit">{lang==='en'?'Search':'Buscar'}</button></div><small>{lang==='en'?'One query. One best route.':'Una consulta. Una sola mejor ruta.'}</small></form>
+    <section className="resident-hero"><div className="hero-copy"><p className="eyebrow">{lang==='en'?'LOCAL GOVERNMENT SHOULD NOT REQUIRE A TRANSLATOR':'EL GOBIERNO LOCAL NO DEBERÍA NECESITAR TRADUCTOR'}</p><h1>{lang==='en'?'What do you need':'¿Qué necesitas'}<br/><em>{lang==='en'?'from your government?':'de tu gobierno?'}</em></h1><p>{lang==='en'?'Type the problem in plain language. We will take you to the right section and show the right office.':'Escribe el problema en lenguaje sencillo. Te llevaremos a la sección correcta y mostraremos la oficina correcta.'}</p></div>
+      <form className="big-search" onSubmit={submit}><label htmlFor="city-search">{lang==='en'?'Search':'Buscar'} {city}</label><div><input id="city-search" value={query} onChange={e=>{setQuery(e.target.value);setSubmitted(false)}} placeholder={isCounty?(lang==='en'?'property tax, deed, county road, commissioners court…':'impuesto predial, escritura, camino del condado…'):(lang==='en'?'water bill, pothole, permit, council agenda…':'factura de agua, bache, permiso, agenda del concejo…')}/><button type="submit">{lang==='en'?'Search':'Buscar'}</button></div><small>{lang==='en'?'Search moves you to the answer.':'La búsqueda te lleva directamente a la respuesta.'}</small></form>
     </section>
 
-    {submitted && <section id="search-results" className="search-results" aria-live="polite"><p className="section-kicker">{lang==='en'?'BEST MATCH':'MEJOR COINCIDENCIA'}</p>{!result?<p>{lang==='en'?'No direct match yet. Choose a common issue below or use the official website.':'Todavía no hay una coincidencia directa. Elige un problema común abajo o usa el sitio oficial.'}</p>:result.area!==jurisdictionType?<div className="office-result"><span>{lang==='en'?'WRONG LEVEL OF GOVERNMENT':'NIVEL DE GOBIERNO INCORRECTO'}</span><h3>{lang==='en'?(result.area==='county'?'This belongs with Coryell County':'This is usually a city issue'):(result.area==='county'?'Esto corresponde al Condado de Coryell':'Esto normalmente corresponde a una ciudad')}</h3><p>{lang==='en'?`${result.titleEn} is normally handled by ${result.officeEn}.`:`${result.titleEs} normalmente lo atiende ${result.officeEs}.`}</p><a href={result.area==='county'?'/coryell-county':'/'}>{lang==='en'?'Go to the right government':'Ir al gobierno correcto'} →</a></div>:<button className="single-result" type="button" onClick={()=>runRoute(result)}><strong>{lang==='en'?result.titleEn:result.titleEs}</strong><span>{lang==='en'?`Start with ${result.officeEn}`:`Empieza con ${result.officeEs}`}</span><i>→</i></button>}</section>}
+    {submitted && result && result.area!==jurisdictionType && <section id="search-results" className="search-results" aria-live="polite"><div className="office-result"><span>{lang==='en'?'RIGHT GOVERNMENT':'GOBIERNO CORRECTO'}</span><h3>{lang==='en'?(result.area==='county'?'This belongs with Coryell County':'This is usually a city issue'):(result.area==='county'?'Esto corresponde al Condado de Coryell':'Esto normalmente corresponde a una ciudad')}</h3><p>{lang==='en'?`${result.titleEn} is handled by ${result.officeEn}.`:`${result.titleEs} lo atiende ${result.officeEs}.`}</p><a href={result.area==='county'?`/coryell-county?q=${encodeURIComponent(query)}`:'/'}>{lang==='en'?'Go there now':'Ir ahora'} →</a></div></section>}
 
-    <div className="city-layout"><aside><p>{lang==='en'?'EXPLORE LOCAL GOVERNMENT':'EXPLORA TU GOBIERNO LOCAL'}</p>{(lang==='en'?navEn:navEs).map((item,i)=><a key={item} href={'#'+ids[i]}>{item}<span>→</span></a>)}</aside><div className="city-content">
-      <section className="start"><p className="section-kicker">{lang==='en'?'START WITH WHAT YOU NEED':'EMPIEZA CON LO QUE NECESITAS'}</p><h2>{lang==='en'?'Common problems':'Problemas comunes'}</h2><div className="problem-grid">{problemButtons.map(r=><button key={r.titleEn} type="button" onClick={()=>runRoute(r)}>{lang==='en'?r.titleEn:r.titleEs}</button>)}</div></section>
+    {submitted && !result && <section id="search-results" className="search-results" aria-live="polite"><p>{lang==='en'?'No direct match yet. Choose a common issue below or use the official website.':'Todavía no hay una coincidencia directa. Elige un problema común abajo o usa el sitio oficial.'}</p></section>}
 
-      <section id="resident-tool" className={`resident-tool ${activeTool?'is-open':''}`} aria-live="polite">
-        {!activeTool && <div><p className="section-kicker">{lang==='en'?'RESIDENT TOOL':'HERRAMIENTA PARA RESIDENTES'}</p><h2>{lang==='en'?'Search above or choose a common problem.':'Busca arriba o elige un problema común.'}</h2></div>}
-        {activeTool==='help' && selected && <div><p className="section-kicker">{lang==='en'?'START HERE':'EMPIEZA AQUÍ'}</p><h2>{lang==='en'?selected.officeEn:selected.officeEs}</h2><p>{lang==='en'?`Best match for “${selected.titleEn}.” Verify current contact information on the official ${city} website.`:`Mejor coincidencia para “${selected.titleEs}”. Verifica la información de contacto actual en el sitio oficial de ${city}.`}</p><a href={officialUrl} target="_blank" rel="noreferrer">{lang==='en'?'Open official website':'Abrir sitio oficial'} ↗</a></div>}
-        {activeTool==='meetings' && <div><p className="section-kicker">{lang==='en'?'MEETINGS':'REUNIONES'}</p><h2>{isCounty?(lang==='en'?'Commissioners Court':'Tribunal de Comisionados'):(lang==='en'?'City Council':'Concejo Municipal')}</h2><p>{lang==='en'?'Use the official source for agendas, notices, minutes and meeting information.':'Usa la fuente oficial para agendas, avisos, actas e información de reuniones.'}</p><a href={officialUrl} target="_blank" rel="noreferrer">{lang==='en'?'Open official meeting source':'Abrir fuente oficial de reuniones'} ↗</a></div>}
-        {activeTool==='money' && <div><p className="section-kicker">{lang==='en'?'FOLLOW THE MONEY':'SIGUE EL DINERO'}</p><h2>{lang==='en'?'Budgets, audits and financial records':'Presupuestos, auditorías y registros financieros'}</h2><a href={officialUrl} target="_blank" rel="noreferrer">{lang==='en'?'Open official financial source':'Abrir fuente financiera oficial'} ↗</a></div>}
-        {activeTool==='records' && <div><p className="section-kicker">{lang==='en'?'PUBLIC RECORDS':'REGISTROS PÚBLICOS'}</p><h2>{lang==='en'?'Find it before you request it.':'Encuéntralo antes de pedirlo.'}</h2><p>{lang==='en'?'Check the official site first. If the record is not already published, then use a focused Texas Public Information Act request.':'Revisa primero el sitio oficial. Si el registro no está publicado, usa una solicitud precisa bajo la Ley de Información Pública de Texas.'}</p><a href={officialUrl} target="_blank" rel="noreferrer">{lang==='en'?'Search official records':'Buscar registros oficiales'} ↗</a></div>}
+    <div className="city-layout"><aside><p>{lang==='en'?'EXPLORE LOCAL GOVERNMENT':'EXPLORA TU GOBIERNO LOCAL'}</p>{(lang==='en'?navEn:navEs).map((item,i)=><a key={item} className={activeTool && ids[i]===sectionId(activeTool)?'active-nav':''} href={'#'+ids[i]}>{item}<span>→</span></a>)}</aside><div className="city-content">
+      <section className="start"><p className="section-kicker">{lang==='en'?'START WITH WHAT YOU NEED':'EMPIEZA CON LO QUE NECESITAS'}</p><h2>{lang==='en'?'Common problems':'Problemas comunes'}</h2><div className="problem-grid">{problemButtons.map(r=><button key={r.titleEn} type="button" onClick={()=>goToRoute(r)}>{lang==='en'?r.titleEn:r.titleEs}</button>)}</div></section>
+
+      <section id="help" className={`editorial-section destination ${activeTool==='help'?'active-destination':''}`}>
+        <p className="section-kicker">{lang==='en'?'I NEED HELP':'NECESITO AYUDA'}</p>
+        <h2>{activeTool==='help'&&selected?currentOffice:(lang==='en'?'One problem. One office.':'Un problema. Una oficina.')}</h2>
+        {activeTool==='help'&&selected?<><p>{lang==='en'?`Best match for “${currentTitle}.” Start with ${currentOffice}.`:`Mejor coincidencia para “${currentTitle}”. Empieza con ${currentOffice}.`}</p><a className="destination-action" href={officialUrl} target="_blank" rel="noreferrer">{lang==='en'?'Open official office source':'Abrir fuente oficial de la oficina'} ↗</a></>:<p>{lang==='en'?'Search above or choose a common problem to see the right office here.':'Busca arriba o elige un problema común para ver aquí la oficina correcta.'}</p>}
       </section>
 
-      <section id="help" className="editorial-section"><p className="section-kicker">{lang==='en'?'WHO HANDLES MY PROBLEM?':'¿QUIÉN ATIENDE MI PROBLEMA?'}</p><h2>{lang==='en'?'One problem. One office.':'Un problema. Una oficina.'}</h2><p>{lang==='en'?'The guide now uses deterministic routing instead of fuzzy multi-result search.':'La guía ahora usa rutas deterministas en vez de búsquedas ambiguas con múltiples resultados.'}</p></section>
-      <section id="meetings" className="editorial-section"><p className="section-kicker">{lang==='en'?'MEETINGS':'REUNIONES'}</p><h2>{lang==='en'?'See what elected officials are doing.':'Mira qué están haciendo los funcionarios electos.'}</h2></section>
-      <section id="money" className="editorial-section"><p className="section-kicker">{lang==='en'?'FOLLOW THE MONEY':'SIGUE EL DINERO'}</p><h2>{lang==='en'?'Numbers need receipts.':'Los números necesitan recibos.'}</h2></section>
-      <section id="records" className="dark-section"><p>{lang==='en'?'FIND IT BEFORE YOU PIR IT':'ENCUÉNTRALO ANTES DE PEDIRLO'}</p><h2>{lang==='en'?'The record may already be public.':'El registro quizá ya sea público.'}</h2></section>
+      <section id="meetings" className={`editorial-section destination ${activeTool==='meetings'?'active-destination':''}`}><p className="section-kicker">{lang==='en'?'MEETINGS':'REUNIONES'}</p><h2>{isCounty?(lang==='en'?'Commissioners Court':'Tribunal de Comisionados'):(lang==='en'?'City Council':'Concejo Municipal')}</h2>{activeTool==='meetings'&&selected&&<p>{lang==='en'?`You searched for “${currentTitle}.” This is the correct meetings section.`:`Buscaste “${currentTitle}”. Esta es la sección correcta de reuniones.`}</p>}<a className="destination-action" href={officialUrl} target="_blank" rel="noreferrer">{lang==='en'?'Open official meeting source':'Abrir fuente oficial de reuniones'} ↗</a></section>
+
+      <section id="money" className={`editorial-section destination ${activeTool==='money'?'active-destination':''}`}><p className="section-kicker">{lang==='en'?'FOLLOW THE MONEY':'SIGUE EL DINERO'}</p><h2>{lang==='en'?'Budgets, audits and financial records':'Presupuestos, auditorías y registros financieros'}</h2>{activeTool==='money'&&selected&&<p>{lang==='en'?`You searched for “${currentTitle}.” Start with ${currentOffice}.`:`Buscaste “${currentTitle}”. Empieza con ${currentOffice}.`}</p>}<a className="destination-action" href={officialUrl} target="_blank" rel="noreferrer">{lang==='en'?'Open official financial source':'Abrir fuente financiera oficial'} ↗</a></section>
+
+      <section id="records" className={`dark-section destination ${activeTool==='records'?'active-destination':''}`}><p>{lang==='en'?'FIND IT BEFORE YOU PIR IT':'ENCUÉNTRALO ANTES DE PEDIRLO'}</p><h2>{lang==='en'?'The record may already be public.':'El registro quizá ya sea público.'}</h2>{activeTool==='records'&&selected&&<span>{lang==='en'?`You searched for “${currentTitle}.” Start with ${currentOffice}. Check the official source before filing a TPIA request.`:`Buscaste “${currentTitle}”. Empieza con ${currentOffice}. Revisa la fuente oficial antes de presentar una solicitud TPIA.`}</span>}<a className="destination-action" href={officialUrl} target="_blank" rel="noreferrer">{lang==='en'?'Search official records':'Buscar registros oficiales'} ↗</a></section>
+
       <section id="rights" className="editorial-section"><p className="section-kicker">{lang==='en'?'YOUR RIGHTS':'TUS DERECHOS'}</p><h2>{lang==='en'?'Texas law, translated into human.':'La ley de Texas, explicada en lenguaje humano.'}</h2></section>
       <section id="sources" className="sources"><strong>{lang==='en'?'Official sources remain authoritative.':'Las fuentes oficiales siguen siendo la autoridad.'}</strong><a href={officialUrl} target="_blank" rel="noreferrer">{lang==='en'?'Visit official website':'Visitar sitio oficial'} ↗</a></section>
     </div></div>
