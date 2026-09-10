@@ -47,6 +47,8 @@ export default function CopperasCoveCouncilGuide(){
       <p><a href="https://www.copperascovetx.gov/agendacenter" target="_blank" rel="noreferrer">Copperas Cove Agenda Center ↗</a></p>
       <p><a href="https://www.texasattorneygeneral.gov/open-government/open-meetings-act-training" target="_blank" rel="noreferrer">Texas Attorney General Open Meetings resources ↗</a></p>
       <p>City Hall: 914 S. Main Street, Copperas Cove, TX 76522. Phone: 254-547-4221.</p>
+      <p>Open Government Hotline: (512) 478-6736 or (877) 673-6839.</p>
+      <small>Independent civic education resource. Always check the current official meeting notice and city source.</small>
     </section>
   </main>;
 }

@@ -53,6 +53,7 @@ export default function GatesvilleCouncilGuide(){
       <p><a href="https://www.texasattorneygeneral.gov/open-government/open-meetings-act-training" target="_blank" rel="noreferrer">Texas Attorney General Open Meetings resources ↗</a></p>
       <p>Open Government Hotline: (512) 478-6736 or (877) 673-6839.</p>
       <small>Source guide prepared by Leo Corona using the 2026 Open Meetings Act Handbook and the City of Gatesville Council Meeting Procedure Policy dated January 10, 2023.</small>
+      <p><small>Independent civic education resource. Always check the current official meeting notice and city source.</small></p>
     </section>
   </main>;
 }
