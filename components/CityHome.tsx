@@ -10,7 +10,7 @@ type CityHomeProps = {
 };
 
 type Lang = 'en' | 'es';
-type ToolId = 'help' | 'meetings' | 'money' | 'records';
+type ToolId = 'help' | 'meetings' | 'money' | 'documents' | 'records';
 type Route = {
   phrases: string[];
   area: 'city' | 'county';
@@ -19,6 +19,7 @@ type Route = {
   titleEs: string;
   officeEn: string;
   officeEs: string;
+  fallback?: boolean;
 };
 
 const cityRoutes: Route[] = [
@@ -33,7 +34,8 @@ const cityRoutes: Route[] = [
   { phrases:['city election','mayor election','council election','candidate','ballot','elección municipal','elección de alcalde','candidato','boleta'], area:'city', tool:'help', titleEn:'City elections', titleEs:'Elecciones municipales', officeEn:'City Secretary / Elections', officeEs:'Secretaría Municipal / Elecciones' },
   { phrases:['council agenda','city council agenda','council meeting','council minutes','meeting video','public comment','next council meeting','when is council','agenda del concejo','reunión del concejo','cuando es la reunion del concejo','cuándo es la reunión del concejo'], area:'city', tool:'meetings', titleEn:'City Council meetings', titleEs:'Reuniones del Concejo Municipal', officeEn:'City Council / City Secretary', officeEs:'Concejo Municipal / Secretaría Municipal' },
   { phrases:['city budget','city audit','city debt','tax rate','certificate of obligation','bond','financial report','2025 audit','2026 budget','presupuesto municipal','auditoría municipal','deuda','tasa de impuestos'], area:'city', tool:'money', titleEn:'City finances', titleEs:'Finanzas municipales', officeEn:'Budget / Finance', officeEs:'Presupuesto / Finanzas' },
-  { phrases:['public record','open records','tpia','pir','ordinance','resolution','city records','email records','contract','records request','registro público','información pública','ordenanza','resolución','solicitud de registros'], area:'city', tool:'records', titleEn:'City public records', titleEs:'Registros públicos municipales', officeEn:'City Secretary / Public Information', officeEs:'Secretaría Municipal / Información Pública' }
+  { phrases:['ordinance','resolution','contract','agenda packet','minutes','audit report','budget document','narrows','chicken ordinance','ordenanza','resolución','contrato','documento','documentos'], area:'city', tool:'documents', titleEn:'Public documents', titleEs:'Documentos públicos', officeEn:'City records / official documents', officeEs:'Registros municipales / documentos oficiales' },
+  { phrases:['public record','open records','tpia','pir','city records','email records','records request','registro público','información pública','solicitud de registros'], area:'city', tool:'records', titleEn:'City public records', titleEs:'Registros públicos municipales', officeEn:'City Secretary / Public Information', officeEs:'Secretaría Municipal / Información Pública' }
 ];
 
 const countyRoutes: Route[] = [
@@ -46,6 +48,7 @@ const countyRoutes: Route[] = [
   { phrases:['jail','inmate','booking','bond','visitation','cárcel','recluso','fianza','visita'], area:'county', tool:'help', titleEn:'Jail / inmate information', titleEs:'Cárcel / información de reclusos', officeEn:'Sheriff / Jail', officeEs:'Alguacil / Cárcel' },
   { phrases:['commissioners court','commissioners court agenda','county judge meeting','commissioner meeting','next commissioners court','tribunal de comisionados','agenda de comisionados'], area:'county', tool:'meetings', titleEn:'Commissioners Court meetings', titleEs:'Reuniones del Tribunal de Comisionados', officeEn:'Commissioners Court', officeEs:'Tribunal de Comisionados' },
   { phrases:['county budget','county audit','county spending','county tax rate','financial report','presupuesto del condado','auditoría del condado','gastos del condado'], area:'county', tool:'money', titleEn:'County finances', titleEs:'Finanzas del condado', officeEn:'County Auditor / Commissioners Court', officeEs:'Auditor del Condado / Tribunal de Comisionados' },
+  { phrases:['ordinance','resolution','contract','agenda packet','minutes','audit report','budget document','document','documents','ordenanza','resolución','contrato','documento','documentos'], area:'county', tool:'documents', titleEn:'Public documents', titleEs:'Documentos públicos', officeEn:'County records / official documents', officeEs:'Registros del condado / documentos oficiales' },
   { phrases:['county public record','county tpia','county open records','county records request','registro público del condado','información pública del condado'], area:'county', tool:'records', titleEn:'County public records', titleEs:'Registros públicos del condado', officeEn:'Record Custodian / Public Information', officeEs:'Custodio de Registros / Información Pública' }
 ];
 
@@ -64,18 +67,32 @@ function scoreRoute(query: string, route: Route) {
   return best;
 }
 
+function fallbackRoute(query: string, area: 'city' | 'county'): Route {
+  return {
+    phrases: [],
+    area,
+    tool: 'documents',
+    titleEn: query,
+    titleEs: query,
+    officeEn: area === 'county' ? 'County records / official documents' : 'City records / official documents',
+    officeEs: area === 'county' ? 'Registros del condado / documentos oficiales' : 'Registros municipales / documentos oficiales',
+    fallback: true
+  };
+}
+
 function findRoute(query: string, preferredArea: 'city' | 'county') {
   const q = normalize(query);
   if (!q) return undefined;
   const all = [...cityRoutes, ...countyRoutes];
-  return all
+  const match = all
     .map(route => ({ route, score: scoreRoute(q, route) + (route.area === preferredArea ? 25 : 0) }))
     .filter(item => item.score > 25)
     .sort((a,b) => b.score - a.score)[0]?.route;
+  return match || fallbackRoute(query.trim(), preferredArea);
 }
 
 function sectionId(tool: ToolId) {
-  return tool === 'help' ? 'help' : tool;
+  return tool;
 }
 
 export default function CityHome({ city, subtitle, officialUrl, jurisdictionType='city' }: CityHomeProps) {
@@ -86,18 +103,22 @@ export default function CityHome({ city, subtitle, officialUrl, jurisdictionType
   const [selected, setSelected] = useState<Route | null>(null);
   const isCounty = jurisdictionType === 'county';
 
-  function goToRoute(route: Route) {
+  function scrollTo(id: string, behavior: ScrollBehavior = 'smooth') {
+    window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior, block:'start' });
+    }, 0);
+  }
+
+  function goToRoute(route: Route, searchText = query) {
     setSelected(route);
     setActiveTool(route.tool);
     setSubmitted(true);
     const id = sectionId(route.tool);
-    requestAnimationFrame(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior:'smooth', block:'start' });
-      const params = new URLSearchParams(window.location.search);
-      params.set('q', query || (lang === 'en' ? route.titleEn : route.titleEs));
-      params.set('lang', lang);
-      window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}#${id}`);
-    });
+    const params = new URLSearchParams(window.location.search);
+    params.set('q', searchText || (lang === 'en' ? route.titleEn : route.titleEs));
+    params.set('lang', lang);
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}#${id}`);
+    scrollTo(id);
   }
 
   useEffect(() => {
@@ -109,26 +130,24 @@ export default function CityHome({ city, subtitle, officialUrl, jurisdictionType
     if (!incomingQuery) return;
     setQuery(incomingQuery);
     const route = findRoute(incomingQuery, jurisdictionType);
-    if (route && route.area === jurisdictionType) {
-      setSelected(route);
-      setActiveTool(route.tool);
-      setSubmitted(true);
-      requestAnimationFrame(() => document.getElementById(sectionId(route.tool))?.scrollIntoView({ behavior:'auto', block:'start' }));
-    } else {
-      setSelected(route || null);
-      setSubmitted(true);
-    }
+    if (!route) return;
+    setSelected(route);
+    setActiveTool(route.tool);
+    setSubmitted(true);
+    scrollTo(sectionId(route.tool), 'auto');
   }, [jurisdictionType]);
 
-  function submit(e: FormEvent) {
+  function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const route = findRoute(query, jurisdictionType);
-    setSubmitted(true);
-    if (route && route.area === jurisdictionType) goToRoute(route);
-    else {
-      setSelected(route || null);
+    const searchText = query.trim();
+    if (!searchText) {
+      setSubmitted(false);
+      setSelected(null);
       setActiveTool(null);
+      return;
     }
+    const route = findRoute(searchText, jurisdictionType);
+    if (route) goToRoute(route, searchText);
   }
 
   function changeLanguage(next: Lang) {
@@ -144,9 +163,7 @@ export default function CityHome({ city, subtitle, officialUrl, jurisdictionType
   const problemButtons = (isCounty ? countyRoutes : cityRoutes).filter(route => route.tool === 'help');
   const currentTitle = selected ? (lang === 'en' ? selected.titleEn : selected.titleEs) : '';
   const currentOffice = selected ? (lang === 'en' ? selected.officeEn : selected.officeEs) : '';
-  const crossHref = selected?.area === 'county'
-    ? `/coryell-county?q=${encodeURIComponent(query)}&lang=${lang}`
-    : `/`;
+  const crossHref = selected?.area === 'county' ? `/coryell-county?q=${encodeURIComponent(query)}&lang=${lang}` : `/`;
 
   return (
     <main id="main" lang={lang}>
@@ -173,31 +190,12 @@ export default function CityHome({ city, subtitle, officialUrl, jurisdictionType
         <form className="big-search" onSubmit={submit}>
           <label htmlFor="city-search">{lang === 'en' ? 'What can we help you find?' : '¿Qué podemos ayudarte a encontrar?'}</label>
           <div>
-            <input id="city-search" value={query} onChange={e => { setQuery(e.target.value); setSubmitted(false); }} placeholder={isCounty ? (lang === 'en' ? 'Property tax, deed, county road, Commissioners Court...' : 'Impuesto predial, escritura, camino del condado...') : (lang === 'en' ? 'Water bill, pothole, permit, council agenda...' : 'Factura de agua, bache, permiso, agenda del concejo...')} />
+            <input id="city-search" name="q" value={query} onChange={e => { setQuery(e.target.value); setSubmitted(false); }} placeholder={isCounty ? (lang === 'en' ? 'Property tax, deed, county road, Commissioners Court...' : 'Impuesto predial, escritura, camino del condado...') : (lang === 'en' ? 'Water bill, pothole, permit, council agenda...' : 'Factura de agua, bache, permiso, agenda del concejo...')} />
             <button type="submit">{lang === 'en' ? 'FIND IT' : 'ENCONTRAR'}</button>
           </div>
           <small>{lang === 'en' ? 'We’ll take you to the right office or information.' : 'Te llevaremos a la oficina o información correcta.'}</small>
         </form>
       </section>
-
-      {submitted && selected && selected.area !== jurisdictionType && (
-        <section id="search-results" className="search-results" aria-live="polite">
-          <div className="office-result">
-            <span>{lang === 'en' ? 'RIGHT GOVERNMENT' : 'GOBIERNO CORRECTO'}</span>
-            <h3>{lang === 'en' ? (selected.area === 'county' ? 'This belongs with Coryell County' : 'This is usually a city issue') : (selected.area === 'county' ? 'Esto corresponde al Condado de Coryell' : 'Esto normalmente corresponde a una ciudad')}</h3>
-            <p>{lang === 'en' ? `${selected.titleEn} is handled by ${selected.officeEn}.` : `${selected.titleEs} lo atiende ${selected.officeEs}.`}</p>
-            <a href={crossHref}>{lang === 'en' ? 'Go there now' : 'Ir ahora'} →</a>
-          </div>
-        </section>
-      )}
-
-      {submitted && !selected && (
-        <section id="search-results" className="search-results" aria-live="polite">
-          <h2>{lang === 'en' ? 'We couldn’t verify that yet.' : 'Todavía no pudimos verificar eso.'}</h2>
-          <p>{lang === 'en' ? 'Try a simpler phrase below. If we still do not have a verified route, use the official source rather than guessing.' : 'Prueba una frase más sencilla abajo. Si todavía no tenemos una ruta verificada, usa la fuente oficial en vez de adivinar.'}</p>
-          <a href={officialUrl} target="_blank" rel="noreferrer">{lang === 'en' ? 'Search the official website' : 'Buscar en el sitio oficial'} ↗</a>
-        </section>
-      )}
 
       <div className="city-layout">
         <aside>
@@ -205,19 +203,19 @@ export default function CityHome({ city, subtitle, officialUrl, jurisdictionType
           {(lang === 'en' ? navEn : navEs).map((item,i) => <a key={item} className={activeTool && ids[i] === sectionId(activeTool) ? 'active-nav' : ''} href={'#'+ids[i]}>{item}<span>→</span></a>)}
         </aside>
         <div className="city-content">
-          <section className="start"><p className="section-kicker">{lang === 'en' ? 'START WITH WHAT YOU NEED' : 'EMPIEZA CON LO QUE NECESITAS'}</p><h2>{lang === 'en' ? 'Common problems' : 'Problemas comunes'}</h2><div className="problem-grid">{problemButtons.map(route => <button key={route.titleEn} type="button" onClick={() => { setQuery(lang === 'en' ? route.titleEn : route.titleEs); goToRoute(route); }}>{lang === 'en' ? route.titleEn : route.titleEs}</button>)}</div></section>
+          <section className="start"><p className="section-kicker">{lang === 'en' ? 'START WITH WHAT YOU NEED' : 'EMPIEZA CON LO QUE NECESITAS'}</p><h2>{lang === 'en' ? 'Common problems' : 'Problemas comunes'}</h2><div className="problem-grid">{problemButtons.map(route => <button key={route.titleEn} type="button" onClick={() => { const text = lang === 'en' ? route.titleEn : route.titleEs; setQuery(text); goToRoute(route, text); }}>{lang === 'en' ? route.titleEn : route.titleEs}</button>)}</div></section>
 
           <section id="help" className={`editorial-section destination ${activeTool === 'help' ? 'active-destination' : ''}`}><p className="section-kicker">{lang === 'en' ? 'I NEED HELP' : 'NECESITO AYUDA'}</p><h2>{activeTool === 'help' && selected ? currentOffice : (lang === 'en' ? 'One problem. One office.' : 'Un problema. Una oficina.')}</h2>{activeTool === 'help' && selected ? <><p>{lang === 'en' ? `You asked about ${currentTitle}. Start with ${currentOffice}.` : `Preguntaste sobre ${currentTitle}. Empieza con ${currentOffice}.`}</p><a className="destination-action" href={officialUrl} target="_blank" rel="noreferrer">{lang === 'en' ? 'Open official source' : 'Abrir fuente oficial'} ↗</a></> : <p>{lang === 'en' ? 'Tell us what you need above. We will bring the answer here.' : 'Dinos qué necesitas arriba. Traeremos la respuesta aquí.'}</p>}</section>
 
           <section id="hall" className="editorial-section"><p className="section-kicker">{lang === 'en' ? 'YOUR LOCAL GOVERNMENT' : 'TU GOBIERNO LOCAL'}</p><h2>{lang === 'en' ? 'Who does what?' : '¿Quién hace qué?'}</h2><p>{lang === 'en' ? 'Use this section to understand elected officials, appointed leadership and departments.' : 'Usa esta sección para entender a los funcionarios electos, el liderazgo designado y los departamentos.'}</p></section>
 
-          <section id="meetings" className={`editorial-section destination ${activeTool === 'meetings' ? 'active-destination' : ''}`}><p className="section-kicker">{lang === 'en' ? 'MEETINGS' : 'REUNIONES'}</p><h2>{isCounty ? (lang === 'en' ? 'Commissioners Court' : 'Tribunal de Comisionados') : (lang === 'en' ? 'City Council' : 'Concejo Municipal')}</h2>{activeTool === 'meetings' && selected && <p>{lang === 'en' ? `You asked about ${currentTitle}. This is the meeting information you need.` : `Preguntaste sobre ${currentTitle}. Esta es la información de reuniones que necesitas.`}</p>}<a className="destination-action" href={officialUrl} target="_blank" rel="noreferrer">{lang === 'en' ? 'Open official meeting source' : 'Abrir fuente oficial de reuniones'} ↗</a></section>
+          <section id="meetings" className={`editorial-section destination ${activeTool === 'meetings' ? 'active-destination' : ''}`}><p className="section-kicker">{lang === 'en' ? 'MEETINGS' : 'REUNIONES'}</p><h2>{isCounty ? (lang === 'en' ? 'Commissioners Court' : 'Tribunal de Comisionados') : (lang === 'en' ? 'City Council' : 'Concejo Municipal')}</h2>{activeTool === 'meetings' && selected && <p>{lang === 'en' ? `You searched for ${currentTitle}. This is the meeting section that matches your request.` : `Buscaste ${currentTitle}. Esta es la sección de reuniones que corresponde a tu solicitud.`}</p>}<a className="destination-action" href={officialUrl} target="_blank" rel="noreferrer">{lang === 'en' ? 'Open official meeting source' : 'Abrir fuente oficial de reuniones'} ↗</a></section>
 
-          <section id="money" className={`editorial-section destination ${activeTool === 'money' ? 'active-destination' : ''}`}><p className="section-kicker">{lang === 'en' ? 'FOLLOW THE MONEY' : 'SIGUE EL DINERO'}</p><h2>{lang === 'en' ? 'Budgets, audits and financial records' : 'Presupuestos, auditorías y registros financieros'}</h2>{activeTool === 'money' && selected && <p>{lang === 'en' ? `You asked about ${currentTitle}. Start with ${currentOffice}.` : `Preguntaste sobre ${currentTitle}. Empieza con ${currentOffice}.`}</p>}<a className="destination-action" href={officialUrl} target="_blank" rel="noreferrer">{lang === 'en' ? 'Open official financial source' : 'Abrir fuente financiera oficial'} ↗</a></section>
+          <section id="money" className={`editorial-section destination ${activeTool === 'money' ? 'active-destination' : ''}`}><p className="section-kicker">{lang === 'en' ? 'FOLLOW THE MONEY' : 'SIGUE EL DINERO'}</p><h2>{lang === 'en' ? 'Budgets, audits and financial records' : 'Presupuestos, auditorías y registros financieros'}</h2>{activeTool === 'money' && selected && <p>{lang === 'en' ? `You searched for ${currentTitle}. Start with ${currentOffice}.` : `Buscaste ${currentTitle}. Empieza con ${currentOffice}.`}</p>}<a className="destination-action" href={officialUrl} target="_blank" rel="noreferrer">{lang === 'en' ? 'Open official financial source' : 'Abrir fuente financiera oficial'} ↗</a></section>
 
-          <section id="documents" className="editorial-section"><p className="section-kicker">{lang === 'en' ? 'DOCUMENTS' : 'DOCUMENTOS'}</p><h2>{lang === 'en' ? 'Find the public record first.' : 'Encuentra primero el registro público.'}</h2></section>
+          <section id="documents" className={`editorial-section destination ${activeTool === 'documents' ? 'active-destination' : ''}`}><p className="section-kicker">{lang === 'en' ? 'DOCUMENTS' : 'DOCUMENTOS'}</p><h2>{activeTool === 'documents' && selected ? (selected.fallback ? (lang === 'en' ? `Search documents for “${query}”` : `Buscar documentos sobre “${query}”`) : currentTitle) : (lang === 'en' ? 'Find the public record first.' : 'Encuentra primero el registro público.')}</h2>{activeTool === 'documents' && selected && <><p>{selected.fallback ? (lang === 'en' ? 'We do not have a verified direct match yet, so we brought you to the official-document path instead of guessing.' : 'Todavía no tenemos una coincidencia directa verificada, así que te llevamos a la ruta de documentos oficiales en vez de adivinar.') : (lang === 'en' ? `This query belongs in public documents. Start with ${currentOffice}.` : `Esta búsqueda corresponde a documentos públicos. Empieza con ${currentOffice}.`)}</p><a className="destination-action" href={officialUrl} target="_blank" rel="noreferrer">{lang === 'en' ? 'Open official document source' : 'Abrir fuente oficial de documentos'} ↗</a></>}</section>
 
-          <section id="records" className={`dark-section destination ${activeTool === 'records' ? 'active-destination' : ''}`}><p>{lang === 'en' ? 'FIND IT BEFORE YOU PIR IT' : 'ENCUÉNTRALO ANTES DE PEDIRLO'}</p><h2>{lang === 'en' ? 'The record may already be public.' : 'El registro quizá ya sea público.'}</h2>{activeTool === 'records' && selected && <span>{lang === 'en' ? `You asked about ${currentTitle}. Start with ${currentOffice}. Check the official source before filing a request.` : `Preguntaste sobre ${currentTitle}. Empieza con ${currentOffice}. Revisa la fuente oficial antes de presentar una solicitud.`}</span>}<a className="destination-action" href={officialUrl} target="_blank" rel="noreferrer">{lang === 'en' ? 'Search official records' : 'Buscar registros oficiales'} ↗</a></section>
+          <section id="records" className={`dark-section destination ${activeTool === 'records' ? 'active-destination' : ''}`}><p>{lang === 'en' ? 'FIND IT BEFORE YOU PIR IT' : 'ENCUÉNTRALO ANTES DE PEDIRLO'}</p><h2>{lang === 'en' ? 'The record may already be public.' : 'El registro quizá ya sea público.'}</h2>{activeTool === 'records' && selected && <span>{lang === 'en' ? `You searched for ${currentTitle}. Start with ${currentOffice}. Check the official source before filing a request.` : `Buscaste ${currentTitle}. Empieza con ${currentOffice}. Revisa la fuente oficial antes de presentar una solicitud.`}</span>}<a className="destination-action" href={officialUrl} target="_blank" rel="noreferrer">{lang === 'en' ? 'Search official records' : 'Buscar registros oficiales'} ↗</a></section>
 
           <section id="rights" className="editorial-section"><p className="section-kicker">{lang === 'en' ? 'YOUR RIGHTS' : 'TUS DERECHOS'}</p><h2>{lang === 'en' ? 'Texas law, translated into human.' : 'La ley de Texas, explicada en lenguaje humano.'}</h2></section>
           <section id="charter" className="editorial-section"><p className="section-kicker">{lang === 'en' ? 'CHARTER / STRUCTURE' : 'CARTA / ESTRUCTURA'}</p><h2>{lang === 'en' ? 'How your local government is organized.' : 'Cómo está organizado tu gobierno local.'}</h2></section>
