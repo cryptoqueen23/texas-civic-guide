@@ -1,0 +1,11 @@
+[
+  {"id":"water-sewer","en":"Water & sewer","es":"Agua y alcantarillado","keywords":["water","sewer","leak","pressure","agua","alcantarillado"]},
+  {"id":"utility-billing","en":"Utility billing","es":"Facturación de servicios","keywords":["bill","payment","utility","factura","pago"]},
+  {"id":"solid-waste","en":"Trash & sanitation","es":"Basura y saneamiento","keywords":["trash","garbage","sanitation","basura"]},
+  {"id":"streets","en":"Streets & potholes","es":"Calles y baches","keywords":["street","pothole","road","bache","calle"]},
+  {"id":"permits","en":"Permits & inspections","es":"Permisos e inspecciones","keywords":["permit","inspection","building","permiso","inspección"]},
+  {"id":"code","en":"Code enforcement","es":"Cumplimiento de códigos","keywords":["code","property","citation","código"]},
+  {"id":"animal-control","en":"Animal control","es":"Control de animales","keywords":["animal","dog","cat","stray","perro","gato"]},
+  {"id":"records","en":"Public records / TPIA","es":"Registros públicos / TPIA","keywords":["records","TPIA","PIR","open records","registros"]},
+  {"id":"court","en":"Municipal court","es":"Tribunal municipal","keywords":["court","ticket","citation","fine","tribunal","multa"]}
+]
