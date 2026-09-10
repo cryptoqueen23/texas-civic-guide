@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type Lang = 'en' | 'es';
 
@@ -29,6 +29,26 @@ export default function Home() {
   const [lang, setLang] = useState<Lang>('en');
   const es = lang === 'es';
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlLang = params.get('lang');
+    const savedLang = window.localStorage.getItem('civic-guide-lang');
+    const initial: Lang = urlLang === 'es' || (urlLang !== 'en' && savedLang === 'es') ? 'es' : 'en';
+    setLang(initial);
+    document.documentElement.lang = initial;
+  }, []);
+
+  function changeLanguage(next: Lang) {
+    setLang(next);
+    document.documentElement.lang = next;
+    window.localStorage.setItem('civic-guide-lang', next);
+
+    const params = new URLSearchParams(window.location.search);
+    params.set('lang', next);
+    const query = params.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+  }
+
   return (
     <main id="main" lang={lang}>
       <header className="masthead">
@@ -36,9 +56,9 @@ export default function Home() {
         <div className="home-tools">
           <span className="home-independent">{es ? 'Educación cívica independiente' : 'Independent civic education'}</span>
           <div className="language-switch" role="group" aria-label={es ? 'Seleccionar idioma' : 'Select language'}>
-            <button type="button" className={lang === 'en' ? 'is-active' : ''} aria-pressed={lang === 'en'} onClick={() => setLang('en')}>English</button>
+            <button type="button" className={lang === 'en' ? 'is-active' : ''} aria-pressed={lang === 'en'} onClick={() => changeLanguage('en')}>English</button>
             <span aria-hidden="true">/</span>
-            <button type="button" className={lang === 'es' ? 'is-active' : ''} aria-pressed={lang === 'es'} onClick={() => setLang('es')}>Español</button>
+            <button type="button" className={lang === 'es' ? 'is-active' : ''} aria-pressed={lang === 'es'} onClick={() => changeLanguage('es')}>Español</button>
           </div>
         </div>
       </header>
@@ -88,7 +108,7 @@ export default function Home() {
             : 'Not affiliated with the City of Copperas Cove, City of Gatesville, or Coryell County.'}
         </p>
         <nav>
-          <button type="button" className="footer-lang" onClick={() => setLang(es ? 'en' : 'es')}>
+          <button type="button" className="footer-lang" onClick={() => changeLanguage(es ? 'en' : 'es')}>
             {es ? 'English' : 'Español'}
           </button>
           <a href="https://www.tree.phoenixsecuritas.com">Phoenix Securitas ↗</a>
