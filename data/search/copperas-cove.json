@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "jurisdiction": "copperas-cove",
+  "lastVerified": null,
+  "notice": "Every record below must be traceable to a real official government source URL. Do not add a record without verifying officialUrl and sourcePage directly. lastVerified is null until a human has opened officialUrl and confirmed the content matches title/description.",
+  "records": [
+    {
+      "id": "cc-ord-2015-42",
+      "jurisdiction": "copperas-cove",
+      "title": "Ordinance No. 2015-42 — Rezoning Lot 2, Block 1 of the Narrows Business and Technology Park",
+      "documentType": "ordinance",
+      "date": "2015-01-01",
+      "descriptionEn": "City ordinance rezoning Lot 2, Block 1 of the Narrows Business and Technology Park.",
+      "descriptionEs": "Ordenanza municipal que rezonifica el Lote 2, Manzana 1 del Narrows Business and Technology Park.",
+      "keywordsEn": ["narrows", "narrows business park", "narrows technology park", "rezoning", "ordinance 2015-42"],
+      "keywordsEs": ["narrows", "rezonificacion", "ordenanza 2015-42"],
+      "officialUrl": "https://www.copperascovetx.gov/DocumentCenter/View/717/2015-42-Rezoning-Lot-2-Block-1-of-the-Narrows-Business-and-Technology-Park-PDF",
+      "sourcePage": "https://www.copperascovetx.gov/190/City-Ordinances",
+      "retrievedAt": "2026-09-10"
+    },
+    {
+      "id": "cc-pz-agenda-2026-04-27",
+      "jurisdiction": "copperas-cove",
+      "title": "Planning & Zoning Commission Agenda Packet — April 27, 2026 (Narrows / Cullinan VA MSOPC replat)",
+      "documentType": "agenda",
+      "date": "2026-04-27",
+      "meetingDate": "2026-04-27",
+      "descriptionEn": "Planning & Zoning Commission agenda packet including a minor site plan/replat item referencing the Narrows area (Cullinan VA MSOPC).",
+      "descriptionEs": "Paquete de agenda de la Comisión de Planificación y Zonificación que incluye un punto de replat/plan de sitio menor relacionado con el área de Narrows (Cullinan VA MSOPC).",
+      "keywordsEn": ["narrows", "planning and zoning", "replat", "cullinan"],
+      "keywordsEs": ["narrows", "planificacion y zonificacion", "replat", "cullinan"],
+      "officialUrl": "https://public.destinyhosted.com/coppedocs/2026/PZ/20260427_2341/AGENDApacket__04-27-26_1209_2339.pdf",
+      "sourcePage": "https://www.copperascovetx.gov/AgendaCenter/",
+      "retrievedAt": "2026-09-10"
+    }
+  ]
+}

@@ -26,7 +26,7 @@ A search performed from `/copperas-cove` must use Copperas Cove information only
 A record from one jurisdiction must NEVER satisfy a query from another jurisdiction merely because the terminology or software looks similar.
 
 - **Narrows canon**: "Narrows" is a **Copperas Cove** topic (Narrows Project / Narrows Business & Technology Park). Searching it should search Copperas Cove agendas, packets, minutes, resolutions, contracts, budgets, and capital plans. Never associate it with Gatesville.
-- **Gatesville agenda canon**: `https://public.destinyhosted.com/agenda_publish.cfm?id=26773` (`id=26773`) belongs to **Gatesville only**. Do not use it as a Copperas Cove source, and do not infer another DestinyHosted portal belongs to a city just because the URL structure looks similar.
+- **Shared agenda portal**: `https://public.destinyhosted.com/agenda_publish.cfm?id=26773` is a **regional DestinyHosted tenant used by both Gatesville and Copperas Cove** (each city's own official site links to it; live verification 2026-09-10 found a "Keep Copperas Cove Beautiful" meeting-type entry inside it, confirming Copperas Cove content is genuinely hosted there too — not a leak, this single portal legitimately serves both). Treat it as a valid official agendas/minutes source for **either** jurisdiction; it does not, by itself, prove a specific document belongs to one city over the other — still verify the actual meeting-body/committee before attributing a specific record.
 
 **Fixed 2026-09-10**: `findRoute()` in `components/CityHome.tsx` used to search `cityRoutes` and `countyRoutes` together (with only a small score bonus for the matching area), so an out-of-jurisdiction query — e.g. "property tax" typed on the Gatesville page — could match the county-only route and present a county office name while linking to the city's own `officialUrl`. Fixed by restricting `findRoute` to only the current jurisdiction's own route pool; an unmatched out-of-jurisdiction query now correctly falls through to that jurisdiction's honest fallback route instead of borrowing another jurisdiction's answer.
 
@@ -36,7 +36,7 @@ A record from one jurisdiction must NEVER satisfy a query from another jurisdict
 
 Handles service questions like "I have a water leak," "Where do I pay my ticket?", "Who handles potholes?" — routes the resident to the correct office/section (I Need Help, Meetings, Follow the Money, Documents, Public Records). Deterministic phrase matching, jurisdiction-scoped via the `cities` field and the per-jurisdiction route pool (see fix above). URL preserves `q=`, `lang=`, and the destination `#section`. Unmatched queries fall back to a honest per-jurisdiction "Documents" pointer rather than dead-ending or guessing.
 
-### Layer 2: Official Record Search (NOT YET BUILT)
+### Layer 2: Official Record Search (V1 shipped 2026-09-10)
 
 Handles record queries like "Narrows," "chicken ordinance," "2025 audit," "water rates," "Certificate of Obligation." These must search **actual indexed government records**, not scroll to a generic section.
 
@@ -55,6 +55,8 @@ Each record roughly: `id, jurisdiction, title, documentType, date, meetingDate, 
 **No-result behavior**: say *"We couldn't verify a public record matching '\_\_\_' yet"* with links to search the official city website / official agendas and minutes. **Never** say "there are no records" — absence from the index does not prove the government has no such record (see §5).
 
 **Bilingual evidence**: English and Spanish searches must hit the **same** underlying record index — store one record with `keywordsEn`/`keywordsEs` (or equivalent), not two separate factual databases.
+
+**V1 implementation** (`lib/types.ts` `OfficialRecord`/`DocumentSearchIndex`, `lib/documentSearch.ts`, `data/search/<slug>.json`): client-side only (JSON statically imported, no API route), searches only the current jurisdiction's own index, ranks exact title > title-contains > keyword-in-query-language > description-contains, ties broken by date. Copperas Cove is seeded with 2 real records (Ordinance 2015-42 rezoning the Narrows Business & Technology Park; a P&Z agenda packet referencing Narrows). Gatesville and Coryell County indexes exist but are honestly empty — their "documents" section shows the no-match message, never a fabricated result. Not yet built: server-side/full-text search, PDF indexing, snippet highlighting, Coryell County officials/services data, consolidating `services.json` into Layer 1.
 
 ## 5. Search evidence rule
 
